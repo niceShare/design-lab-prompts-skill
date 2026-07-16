@@ -7,73 +7,180 @@ import hashlib
 import json
 import sys
 from collections import Counter
+from datetime import datetime
 from pathlib import Path
 from typing import Any
-
-
-EXPECTED_STATS = {
-    "styles": 77,
-    "styles_bilingual": 67,
-    "styles_zh_only": 10,
-    "prompts_zh": 174,
-    "prompts_en": 144,
-}
 
 
 def fail(message: str) -> None:
     raise SystemExit(f"error: {message}")
 
 
+def calculate_stats(styles: list[dict[str, Any]]) -> dict[str, int]:
+    return {
+        "styles": len(styles),
+        "styles_bilingual": sum(style["translation_status"] == "complete" for style in styles),
+        "styles_zh_only": sum(style["translation_status"] == "zh-only" for style in styles),
+        "prompts_zh": sum(len(style["prompts"]["zh"]) for style in styles),
+        "prompts_en": sum(len(style["prompts"]["en"]) for style in styles),
+    }
+
+
+def recommendation_count(catalog: dict[str, Any]) -> int:
+    return sum(
+        len(items)
+        for levels in catalog["recommender"]["recommendations"].values()
+        for items in levels.values()
+    )
+
+
 def validate(catalog: dict[str, Any]) -> None:
     if catalog.get("schema_version") != "1.0.0":
         fail("schema_version must be 1.0.0")
-    if catalog.get("stats") != EXPECTED_STATS:
-        fail(f"unexpected stats: {catalog.get('stats')!r}")
+
+    source = catalog.get("source")
+    if not isinstance(source, dict):
+        fail("source must be an object")
+    required_source_strings = (
+        "url", "title", "curator", "captured_at", "extraction", "inline_source_sha256",
+    )
+    if any(not isinstance(source.get(field), str) or not source[field] for field in required_source_strings):
+        fail("source provenance fields must be non-empty strings")
+    if not source["url"].startswith("https://"):
+        fail("source url must use HTTPS")
+    try:
+        datetime.fromisoformat(source["captured_at"].replace("Z", "+00:00"))
+    except ValueError:
+        fail("source captured_at must be an ISO 8601 date-time")
+    source_hash = source["inline_source_sha256"]
+    if len(source_hash) != 64 or any(character not in "0123456789abcdef" for character in source_hash):
+        fail("source inline_source_sha256 must be a lowercase SHA-256 digest")
+    if not isinstance(source.get("inline_source_characters"), int) or source["inline_source_characters"] < 1:
+        fail("source inline_source_characters must be a positive integer")
 
     styles = catalog.get("styles")
-    if not isinstance(styles, list) or len(styles) != EXPECTED_STATS["styles"]:
-        fail("styles array is missing or has the wrong length")
+    if not isinstance(styles, list) or not styles:
+        fail("styles must be a non-empty array")
+    if any(not isinstance(style, dict) for style in styles):
+        fail("every style must be an object")
     ids = [style.get("id") for style in styles]
+    if any(not isinstance(style_id, str) or not style_id for style_id in ids):
+        fail("every style must have a non-empty string id")
     if len(set(ids)) != len(ids):
-        fail("style ids are not unique")
+        fail("style ids must be unique")
 
-    zh_count = 0
-    en_count = 0
     for expected_order, style in enumerate(styles, 1):
         if style.get("order") != expected_order:
             fail(f"style order mismatch at {style.get('id')}")
-        for field in ("name", "description", "characteristics", "colors", "css", "hint", "prompts", "dos", "donts"):
+        for field in (
+            "name", "difficulty", "filters", "description", "characteristics", "colors", "css", "hint",
+            "prompts", "dos", "donts", "translation_status",
+        ):
             if field not in style:
                 fail(f"{style['id']} is missing {field}")
-        if not style["description"]["zh"] or not style["prompts"]["zh"] or not style["colors"]:
+        for field in ("name", "description", "characteristics", "hint", "prompts", "dos", "donts"):
+            if not isinstance(style[field], dict):
+                fail(f"{style['id']} has an invalid {field} object")
+        if (
+            not style["name"].get("zh")
+            or not style["name"].get("en")
+            or not style["description"].get("zh")
+            or not style["characteristics"].get("zh")
+            or not style["hint"].get("zh")
+            or not style["prompts"].get("zh")
+            or not style["dos"].get("zh")
+            or not style["donts"].get("zh")
+            or not style["colors"]
+            or not isinstance(style["css"], str)
+            or not style["css"]
+        ):
             fail(f"{style['id']} lacks required Chinese data")
+        if not isinstance(style["difficulty"], int) or not 1 <= style["difficulty"] <= 5:
+            fail(f"{style['id']} difficulty must be an integer from 1 to 5")
+        if not isinstance(style["filters"], list) or not all(
+            isinstance(value, str) and value for value in style["filters"]
+        ):
+            fail(f"{style['id']} filters must be non-empty strings")
+        if not isinstance(style["colors"], list):
+            fail(f"{style['id']} colors must be an array")
+        for color in style["colors"]:
+            if (
+                not isinstance(color, dict)
+                or not isinstance(color.get("hex"), str)
+                or not color["hex"]
+                or not isinstance(color.get("name"), dict)
+                or not color["name"].get("zh")
+            ):
+                fail(f"{style['id']} has a malformed palette entry")
         for language in ("zh", "en"):
-            for prompt in style["prompts"][language]:
+            if not isinstance(style["prompts"].get(language), list):
+                fail(f"{style['id']} has an invalid {language} prompt list")
+            for prompt in style["prompts"].get(language, []):
                 if not prompt.get("title") or not prompt.get("text"):
                     fail(f"{style['id']} has an empty {language} prompt")
-        zh_count += len(style["prompts"]["zh"])
-        en_count += len(style["prompts"]["en"])
+        expected_status = "complete" if style["prompts"]["en"] else "zh-only"
+        if style.get("translation_status") != expected_status:
+            fail(f"{style['id']} has inconsistent translation_status")
+        if expected_status == "complete":
+            for field in ("description", "characteristics", "hint", "dos", "donts"):
+                if not style[field].get("en"):
+                    fail(f"{style['id']} is marked complete but lacks English {field}")
 
-    if (zh_count, en_count) != (EXPECTED_STATS["prompts_zh"], EXPECTED_STATS["prompts_en"]):
-        fail(f"prompt totals do not match: zh={zh_count}, en={en_count}")
+    computed_stats = calculate_stats(styles)
+    if catalog.get("stats") != computed_stats:
+        fail(f"catalog stats do not match contents: expected {computed_stats!r}, got {catalog.get('stats')!r}")
 
-    categories = catalog.get("recommender", {}).get("categories", [])
-    recommendations = catalog.get("recommender", {}).get("recommendations", {})
-    if len(categories) != 12 or set(recommendations) != {item["id"] for item in categories}:
-        fail("recommender categories are incomplete")
-    recommendation_count = 0
+    recommender = catalog.get("recommender")
+    if not isinstance(recommender, dict):
+        fail("recommender must be an object")
+    categories = recommender.get("categories")
+    levels_metadata = recommender.get("levels")
+    recommendations = recommender.get("recommendations")
+    if not isinstance(categories, list) or not categories:
+        fail("recommender categories must be a non-empty array")
+    if not isinstance(levels_metadata, list) or not levels_metadata:
+        fail("recommender levels must be a non-empty array")
+    if not isinstance(recommendations, dict):
+        fail("recommender recommendations must be an object")
+
+    if any(not isinstance(item, dict) for item in categories):
+        fail("every recommender category must be an object")
+    category_ids = [item.get("id") for item in categories]
+    if any(not category_id for category_id in category_ids) or len(set(category_ids)) != len(category_ids):
+        fail("recommender category ids must be non-empty and unique")
+    if set(recommendations) != set(category_ids):
+        fail("recommender category metadata and recommendation keys do not match")
+
+    if any(not isinstance(item, dict) for item in levels_metadata):
+        fail("every recommender level must be an object")
+    raw_level_ids = [item.get("id") for item in levels_metadata]
+    if any(level_id is None for level_id in raw_level_ids):
+        fail("recommender level ids must be present")
+    level_ids = [str(level_id) for level_id in raw_level_ids]
+    if len(set(level_ids)) != len(level_ids):
+        fail("recommender level ids must be unique")
+
+    known_ids = set(ids)
     for category, levels in recommendations.items():
-        if set(levels) != {"1", "2", "3", "4"}:
-            fail(f"{category} does not have four recommendation levels")
+        if not isinstance(levels, dict) or set(levels) != set(level_ids):
+            fail(f"{category} recommendation levels do not match level metadata")
         for level, items in levels.items():
-            if len(items) != 3:
-                fail(f"{category}/{level} does not have three recommendations")
+            if not isinstance(items, list) or not items:
+                fail(f"{category}/{level} must have at least one recommendation")
+            if any(not isinstance(item, dict) for item in items):
+                fail(f"{category}/{level} recommendation entries must be objects")
+            recommended_ids = [item.get("style_id") for item in items]
+            if len(set(recommended_ids)) != len(recommended_ids):
+                fail(f"{category}/{level} contains duplicate styles")
             for item in items:
-                if item["style_id"] not in ids:
-                    fail(f"recommendation references unknown style {item['style_id']}")
-                recommendation_count += 1
-    if recommendation_count != 144:
-        fail(f"expected 144 recommendations, got {recommendation_count}")
+                style_id = item.get("style_id")
+                if style_id not in known_ids:
+                    fail(f"recommendation references unknown style {style_id!r}")
+                reason = item.get("reason")
+                if not isinstance(reason, dict) or not reason.get("zh") or not reason.get("en"):
+                    fail(f"{category}/{level}/{style_id} lacks a bilingual reason")
+                if not isinstance(item.get("badges"), list):
+                    fail(f"{category}/{level}/{style_id} badges must be an array")
 
 
 def escape_table(value: str) -> str:
@@ -93,7 +200,8 @@ def generate_index(catalog: dict[str, Any]) -> str:
         "",
         "- Difficulty: " + ", ".join(f"{level}/5 = {difficulty[level]}" for level in sorted(difficulty)),
         "- Filters: " + ", ".join(f"{tag} = {filters[tag]}" for tag in sorted(filters)),
-        "- Translation: 67 bilingual; 10 Chinese-only.",
+        f"- Translation: {catalog['stats']['styles_bilingual']} bilingual; "
+        f"{catalog['stats']['styles_zh_only']} Chinese-only.",
         "",
         "## Styles",
         "",
@@ -181,12 +289,15 @@ def main() -> int:
         "schema_version": catalog["schema_version"],
         "source": catalog["source"],
         "stats": catalog["stats"],
-        "recommendation_records": 144,
+        "recommendation_records": recommendation_count(catalog),
         "files": {name: {"sha256": sha256(references / name), "bytes": (references / name).stat().st_size}
                   for name in tracked},
     }
     write_text(references / "manifest.json", json.dumps(manifest, ensure_ascii=False, indent=2) + "\n")
-    print(json.dumps({**catalog["stats"], "recommendation_records": 144}, ensure_ascii=False))
+    print(json.dumps(
+        {**catalog["stats"], "recommendation_records": recommendation_count(catalog)},
+        ensure_ascii=False,
+    ))
     return 0
 
 

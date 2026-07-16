@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import copy
 import hashlib
+import importlib.util
 import json
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -13,6 +16,166 @@ SKILL = ROOT / "skill" / "design-lab-prompts"
 REFERENCES = SKILL / "references"
 CATALOG_PATH = REFERENCES / "catalog.json"
 CLI = SKILL / "scripts" / "query_prompts.py"
+EXTRACTOR = ROOT / "tools" / "extract_site_data.mjs"
+GENERATOR = ROOT / "tools" / "build_reference_files.py"
+
+
+def load_generator_module():
+    spec = importlib.util.spec_from_file_location("build_reference_files", GENERATOR)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"Unable to load generator: {GENERATOR}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def style_array_fixture(description: str = '"安全说明"') -> str:
+    return f"""[
+      {{
+        id: "safe", cn: "安全风格", name: "Safe Style", diff: 1, f: ["easy"],
+        desc: {description}, chars: ["清晰"], colors: ["#ffffff"], cnames: ["白色"],
+        css: "color: #111;", hint: "保持清晰", prompts: [{{t: "基础", x: "安全 prompt"}}],
+        dos: ["保持清晰"], donts: ["不要混乱"],
+      }},
+    ]"""
+
+
+def extractor_fixture(
+    style_expression: str | None = None,
+    description: str = '"安全说明"',
+    styles_en: str | None = None,
+) -> str:
+    source_style = style_expression or style_array_fixture(description)
+    english_styles = styles_en or (
+        '{safe: {desc: "Safe description", chars: ["Clear"], '
+        'dos: ["Stay clear"], donts: ["Avoid clutter"]}}'
+    )
+    return f"""
+      const S = {source_style};
+      const S_EN = {english_styles};
+      const P={{safe: {{cnames: ["White"], hint: "Stay clear", prompts: [{{t: "Basic", x: "Safe prompt"}}]}}}};
+      const RECO_CATS = [{{id: "saas", icon: "S", zh: "工具", en: "Tools"}}];
+      const RECO_LEVELS = [{{id: 1, label: "标准", desc: "安全"}}];
+      const RECO_MAP = {{saas: {{1: [["safe", "安全理由", "Safe reason", ["safe"]]]}}}};
+      /* {"padding" * 180} */
+    """
+
+
+class ExtractorTests(unittest.TestCase):
+    def run_extractor(
+        self,
+        source: str | list[dict[str, str]],
+        captured_at: str = "2025-01-02T03:04:05Z",
+    ) -> tuple[subprocess.CompletedProcess[str], dict]:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            is_json = isinstance(source, list)
+            source_path = Path(temporary_directory) / ("inline.json" if is_json else "inline.js")
+            output_path = Path(temporary_directory) / "catalog.json"
+            source_text = json.dumps(source, ensure_ascii=False) if is_json else source
+            source_path.write_text(source_text, encoding="utf-8")
+            result = subprocess.run(
+                [
+                    "node",
+                    str(EXTRACTOR),
+                    str(source_path),
+                    str(output_path),
+                    "--captured-at",
+                    captured_at,
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            payload = json.loads(output_path.read_text(encoding="utf-8")) if output_path.exists() else {}
+            return result, payload
+
+    def test_plain_data_literals_are_extracted(self) -> None:
+        result, payload = self.run_extractor(extractor_fixture())
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(payload["stats"]["styles"], 1)
+        self.assertEqual(payload["styles"][0]["id"], "safe")
+
+    def test_executable_style_expression_is_rejected(self) -> None:
+        result, _ = self.run_extractor(extractor_fixture(f"(() => {style_array_fixture()})()"))
+        self.assertNotEqual(result.returncode, 0)
+
+    def test_template_interpolation_is_rejected(self) -> None:
+        result, _ = self.run_extractor(extractor_fixture(description="`unsafe ${1 + 1}`"))
+        self.assertNotEqual(result.returncode, 0)
+
+    def test_capture_time_is_supplied_by_the_caller(self) -> None:
+        captured_at = "2025-01-02T03:04:05Z"
+        result, payload = self.run_extractor(extractor_fixture(), captured_at=captured_at)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(payload["source"]["captured_at"], captured_at)
+
+    def test_json_input_selects_the_script_with_catalog_markers(self) -> None:
+        scripts = [
+            {"text": extractor_fixture()},
+            {"text": "/* unrelated but longer */" + "x" * 5_000},
+        ]
+        result, payload = self.run_extractor(scripts)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(payload["styles"][0]["id"], "safe")
+
+    def test_markers_inside_comments_are_ignored(self) -> None:
+        decoy = style_array_fixture().replace('id: "safe"', 'id: "decoy"', 1)
+        source = f"/* const S = {decoy} */\n{extractor_fixture()}"
+        result, payload = self.run_extractor(source)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(payload["styles"][0]["id"], "safe")
+
+    def test_orphan_english_metadata_is_rejected(self) -> None:
+        styles_en = """{
+          safe: {desc: "Safe", chars: ["Clear"], dos: ["Do"], donts: ["Don't"]},
+          orphan: {desc: "Orphan", chars: ["Unknown"], dos: ["Do"], donts: ["Don't"]},
+        }"""
+        result, _ = self.run_extractor(extractor_fixture(styles_en=styles_en))
+        self.assertNotEqual(result.returncode, 0)
+
+
+class GeneratorTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.generator = load_generator_module()
+        cls.catalog = json.loads(CATALOG_PATH.read_text(encoding="utf-8"))
+
+    def updated_catalog(self) -> dict:
+        catalog = copy.deepcopy(self.catalog)
+        added_style = copy.deepcopy(catalog["styles"][-1])
+        added_style["order"] = len(catalog["styles"]) + 1
+        added_style["id"] = "future-style"
+        added_style["name"] = {"zh": "未来风格", "en": "Future Style"}
+        catalog["styles"].append(added_style)
+        catalog["stats"]["styles"] += 1
+        catalog["stats"]["styles_zh_only"] += 1
+        catalog["stats"]["prompts_zh"] += len(added_style["prompts"]["zh"])
+        return catalog
+
+    def test_updated_snapshot_is_validated_by_its_own_contents(self) -> None:
+        self.generator.validate(self.updated_catalog())
+
+    def test_style_index_uses_snapshot_translation_counts(self) -> None:
+        index = self.generator.generate_index(self.updated_catalog())
+        self.assertIn("67 bilingual; 11 Chinese-only", index)
+
+    def test_recommendation_count_is_computed_from_records(self) -> None:
+        catalog = copy.deepcopy(self.catalog)
+        catalog["recommender"]["recommendations"]["saas"]["1"].pop()
+        self.assertEqual(self.generator.recommendation_count(catalog), 143)
+
+    def test_missing_source_provenance_is_rejected(self) -> None:
+        catalog = copy.deepcopy(self.catalog)
+        del catalog["source"]["inline_source_sha256"]
+        with self.assertRaises(SystemExit):
+            self.generator.validate(catalog)
+
+    def test_malformed_palette_entry_is_rejected(self) -> None:
+        catalog = copy.deepcopy(self.catalog)
+        catalog["styles"][0]["colors"][0]["hex"] = ""
+        with self.assertRaises(SystemExit):
+            self.generator.validate(catalog)
 
 
 class CatalogTests(unittest.TestCase):
@@ -89,13 +252,26 @@ class CatalogTests(unittest.TestCase):
 
 
 class DocumentationTests(unittest.TestCase):
-    def test_reference_and_learning_use_statement_is_prominent(self) -> None:
+    def test_public_readme_has_open_source_onboarding_and_prominent_notice(self) -> None:
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         self.assertIn("https://design-lab-yanliu.vercel.app/", readme)
-        self.assertIn("非官方开源学习项目", readme)
-        self.assertIn("仅作为学习、研究与交流资料提供", readme)
+        self.assertIn("unofficial, independent open-source learning project", readme)
+        self.assertIn("solely for study, research, design analysis, and non-commercial exchange", readme)
+        self.assertIn("README.zh-CN.md", readme)
+        self.assertIn("Quick start", readme)
+        self.assertIn("CONTRIBUTING.md", readme)
+        self.assertIn("SECURITY.md", readme)
+        self.assertIn("AUDIT.md", readme)
         self.assertIn("ATTRIBUTION.md", readme)
         self.assertIn("NOTICE.md", readme)
+
+    def test_open_source_community_documents_are_present(self) -> None:
+        contributing = (ROOT / "CONTRIBUTING.md").read_text(encoding="utf-8")
+        security = (ROOT / "SECURITY.md").read_text(encoding="utf-8")
+        self.assertIn("Pull request checklist", contributing)
+        self.assertIn("Updating the source snapshot", contributing)
+        self.assertIn("Report a vulnerability", security)
+        self.assertIn("security/advisories/new", security)
 
     def test_attribution_is_bilingual_and_explicit(self) -> None:
         attribution = (ROOT / "ATTRIBUTION.md").read_text(encoding="utf-8")
@@ -154,6 +330,20 @@ class CliTests(unittest.TestCase):
         )
         self.assertEqual(payload["detected_category"], "aitech")
         self.assertEqual([item["id"] for item in payload["results"]], ["terminal", "kinetic", "neo"])
+
+    def test_short_ai_alias_does_not_match_inside_retail(self) -> None:
+        payload = json.loads(
+            self.run_cli("recommend", "retail landing page", "--lang", "en", "--json").stdout
+        )
+        self.assertEqual(payload["detected_category"], "ecom")
+
+    def test_search_fallback_reason_uses_requested_language(self) -> None:
+        payload = json.loads(
+            self.run_cli("recommend", "glassmorphism", "--lang", "zh", "--json").stdout
+        )
+        self.assertIsNone(payload["detected_category"])
+        self.assertGreater(len(payload["results"]), 0)
+        self.assertEqual(payload["results"][0]["reason"], "匹配到目录字段")
 
     def test_search_finds_glassmorphism(self) -> None:
         payload = json.loads(self.run_cli("search", "frosted glass", "--lang", "en", "--json").stdout)

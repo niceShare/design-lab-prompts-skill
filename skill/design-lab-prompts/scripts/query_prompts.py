@@ -40,6 +40,14 @@ def normalize(value: str) -> str:
     return re.sub(r"[\s_/]+", " ", value)
 
 
+def contains_term(haystack: str, term: str) -> bool:
+    """Match Latin aliases as tokens and CJK aliases as substrings."""
+    needle = normalize(term)
+    if re.fullmatch(r"[a-z0-9-]+(?: [a-z0-9-]+)*", needle):
+        return bool(re.search(rf"(?<![a-z0-9]){re.escape(needle)}(?![a-z0-9])", haystack))
+    return needle in haystack
+
+
 def load_catalog(path: Path) -> dict[str, Any]:
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
@@ -141,8 +149,8 @@ def detect_category(description: str) -> str | None:
     haystack = normalize(description)
     scored = []
     for category, terms in CATEGORY_ALIASES.items():
-        score = sum(3 if normalize(term) in haystack else 0 for term in terms)
-        if category == "aitech" and re.search(r"\bai\b", haystack):
+        score = sum(3 if contains_term(haystack, term) else 0 for term in terms)
+        if category == "aitech" and contains_term(haystack, "ai"):
             score += 4
         if score:
             scored.append((score, category))
@@ -286,8 +294,9 @@ def command_recommend(catalog: dict[str, Any], args: argparse.Namespace) -> None
         results = [{"style": by_id[item["style_id"]], "reason": item["reason"][args.lang], "badges": item["badges"]}
                    for item in items]
     else:
+        fallback_reason = "匹配到目录字段" if args.lang == "zh" else "Matched catalog fields"
         for result in search_styles(catalog, args.description, "all", args.limit):
-            results.append({"style": result["style"], "reason": "Matched catalog fields", "badges": []})
+            results.append({"style": result["style"], "reason": fallback_reason, "badges": []})
     results = results[:args.limit]
     payload = {
         "detected_category": category,
