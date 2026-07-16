@@ -2,7 +2,17 @@
 
 把 [Design Lab](https://design-lab-yanliu.vercel.app/) 当前版本中的设计风格 prompt 做成一个可离线检索、推荐和复用的 Codex skill。
 
-> v0.1.0 · 快照时间 2026-07-16 · 77 个风格 · 318 条双语语言项
+> v0.1.1 · 快照时间 2026-07-16 · 77 个风格 · 318 条双语语言项
+
+> [!IMPORTANT]
+> 这是一个参考 Design Lab 公开网站进行研究、整理和工具化设计的非官方开源学习项目，与 Design Lab 或 Dreameryanyan 没有隶属、合作或背书关系。项目代码采用 MIT License；收录的上游 prompt、风格说明及相关元数据不属于本项目原创，也不包含在 MIT 授权中，仅作为学习、研究与交流资料提供。详情见 [参考来源与使用声明](ATTRIBUTION.md) 和 [NOTICE](NOTICE.md)。
+
+## 参考来源
+
+- 参考网站：[Design Lab / Design Style Laboratory](https://design-lab-yanliu.vercel.app/)
+- 原站署名：Curated by Dreameryanyan
+- 本项目性质：参考原站公开内容进行离线归档、结构化研究和 Codex skill 设计
+- 官方关系：本项目为非官方独立项目，不代表原站或策展人
 
 ## 包含什么
 
@@ -61,6 +71,7 @@ examples/cases.md               4 个端到端案例
 research/analysis.md            站点与 prompt 体系分析
 tools/                          采集归一化和引用生成工具
 tests/test_catalog.py           完整性与 CLI 测试
+ATTRIBUTION.md                  中英双语参考来源与使用声明
 ```
 
 ## 重新生成引用文件
@@ -75,13 +86,18 @@ python3 -m unittest discover -s tests -v
 
 采集时必须分片读取长脚本；当前内嵌源码有 294,111 个字符，单次跨浏览器读取会在 200KB 附近被截断。
 
-## 数据与许可
+## 开源范围与数据声明
 
-本仓库原创代码与文档采用 MIT License。Design Lab 的 prompt 原文和元数据归原作者/权利人所有，不属于 MIT 授权范围。抓取页面未发现内容许可；如果要公开再分发数据集，请先阅读 [NOTICE.md](NOTICE.md) 并自行确认授权条件。
+本仓库原创代码与原创文档采用 MIT License，可以依照该许可证使用、修改和分发。Design Lab 的 prompt 原文、风格说明和相关元数据归原作者或权利人所有，不属于 MIT 授权范围。
 
-来源署名：Design Lab / Design Style Laboratory，Curated by Dreameryanyan。
+仓库中的上游内容快照仅供学习、研究、设计分析与非商业交流使用；这项声明不代表本项目取得了上游内容的再许可权，也不授予商业再分发、转售、再授权或制作衍生数据集的权利。公开发布、商业使用或大规模再分发前，请自行确认授权并在需要时联系原权利人。
+
+使用或分享本项目时，请保留以下参考说明：
+
+> 本项目参考 Design Lab（https://design-lab-yanliu.vercel.app/）的公开设计风格资料进行研究与工具化实现；原站标注为 Curated by Dreameryanyan。本项目为非官方学习项目。
+
+完整条款：[ATTRIBUTION.md](ATTRIBUTION.md) · [NOTICE.md](NOTICE.md) · [LICENSE](LICENSE)
 
 ## English summary
 
-An offline Codex skill for searching and applying the current Design Lab collection: 77 styles, 174 Chinese prompt entries, 144 upstream English prompt entries, complete design tokens, and the original 144-record recommender. Runtime tooling uses only Python's standard library. See `NOTICE.md` before redistributing copied upstream content.
-
+An unofficial open-source learning project inspired by and referencing the public [Design Lab](https://design-lab-yanliu.vercel.app/) website, credited there as “Curated by Dreameryanyan.” It provides an offline Codex skill with 77 styles, 174 Chinese prompt entries, 144 upstream English prompt entries, and the original 144-record recommender. Original project code is MIT-licensed; copied upstream content is excluded from that license and is bundled solely for study, research, and non-commercial exchange. See `ATTRIBUTION.md` and `NOTICE.md`.

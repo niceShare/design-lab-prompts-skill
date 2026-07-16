@@ -1,5 +1,5 @@
 {
-  "version": "0.1.0",
+  "version": "0.1.1",
   "schema_version": "1.0.0",
   "source": {
     "url": "https://design-lab-yanliu.vercel.app/",
@@ -37,8 +37,8 @@
       "bytes": 34090
     },
     "source-notes.md": {
-      "sha256": "560f5370756aed421599fb41bce8a633de844750bc738d8c3a248b6e59defb86",
-      "bytes": 1648
+      "sha256": "b3f210029938ffe4bb1e2be6d334a1c419c45dbaa124679b2432b15cf1d6dc8f",
+      "bytes": 1972
     }
   }
 }

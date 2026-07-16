@@ -160,7 +160,11 @@ def main() -> int:
     source_path = Path(sys.argv[1]).resolve()
     skill_dir = Path(sys.argv[2]).resolve()
     references = skill_dir / "references"
+    repository_root = skill_dir.parents[1]
+    version_path = repository_root / "VERSION"
     source_notes = references / "source-notes.md"
+    if not version_path.exists():
+        fail(f"repository version file is missing: {version_path}")
     if not source_notes.exists():
         fail(f"source notes must exist before generation: {source_notes}")
 
@@ -173,7 +177,7 @@ def main() -> int:
 
     tracked = ["catalog.json", "style-index.md", "prompts-zh.md", "prompts-en.md", "source-notes.md"]
     manifest = {
-        "version": "0.1.0",
+        "version": version_path.read_text(encoding="utf-8").strip(),
         "schema_version": catalog["schema_version"],
         "source": catalog["source"],
         "stats": catalog["stats"],

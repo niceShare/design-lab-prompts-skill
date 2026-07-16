@@ -88,6 +88,37 @@ class CatalogTests(unittest.TestCase):
             self.assertEqual(hashlib.sha256(path.read_bytes()).hexdigest(), metadata["sha256"])
 
 
+class DocumentationTests(unittest.TestCase):
+    def test_reference_and_learning_use_statement_is_prominent(self) -> None:
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        self.assertIn("https://design-lab-yanliu.vercel.app/", readme)
+        self.assertIn("非官方开源学习项目", readme)
+        self.assertIn("仅作为学习、研究与交流资料提供", readme)
+        self.assertIn("ATTRIBUTION.md", readme)
+        self.assertIn("NOTICE.md", readme)
+
+    def test_attribution_is_bilingual_and_explicit(self) -> None:
+        attribution = (ROOT / "ATTRIBUTION.md").read_text(encoding="utf-8")
+        self.assertIn("参考来源", attribution)
+        self.assertIn("Reference source", attribution)
+        self.assertIn("Curated by Dreameryanyan", attribution)
+        self.assertIn("仅供学习、研究、设计分析和非商业交流使用", attribution)
+        self.assertIn("solely for study, research, design analysis, and non-commercial exchange", attribution)
+
+    def test_notice_separates_code_license_from_upstream_content(self) -> None:
+        notice = (ROOT / "NOTICE.md").read_text(encoding="utf-8")
+        self.assertIn("MIT License 仅适用于本仓库原创的软件代码和原创项目文档", notice)
+        self.assertIn("不包含在 MIT 授权中", notice)
+        self.assertIn("No affiliation, partnership, sponsorship, endorsement", notice)
+        self.assertIn("does not cover upstream prompt text", notice)
+
+    def test_skill_preserves_source_credit_for_shared_outputs(self) -> None:
+        skill = (SKILL / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("https://design-lab-yanliu.vercel.app/", skill)
+        self.assertIn("Curated by Dreameryanyan", skill)
+        self.assertIn("Treat copied Design Lab prompts and metadata as upstream reference content", skill)
+
+
 class CliTests(unittest.TestCase):
     def run_cli(self, *args: str, expected_code: int = 0) -> subprocess.CompletedProcess[str]:
         result = subprocess.run(

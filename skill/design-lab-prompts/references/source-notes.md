@@ -20,7 +20,6 @@ The source recommender is also preserved: 12 project categories × 4 creativity 
 
 Prompt text, labels, CSS snippets, descriptions, characteristics, palettes, and do/don't rules are stored as exposed by the source. Normalization changes object structure and escaping only. No missing English text is machine-translated.
 
-## Rights
+## Rights and intended use
 
-The repository's MIT license applies to original code and project documentation only. The copied Design Lab prompt text and metadata remain attributed to the upstream curator and are not included in the MIT grant. No content license was found on the captured page. Review `NOTICE.md` at the repository root before redistributing the dataset.
-
+This is an unofficial project referencing Design Lab for learning and research. The repository's MIT license applies to original code and original project documentation only. The copied Design Lab prompt text and metadata remain attributed to the upstream curator and are not included in the MIT grant. No content license was found on the captured page. The upstream-content snapshot is provided solely for study, research, design analysis, and non-commercial exchange; it does not grant commercial redistribution or sublicensing rights. Review `ATTRIBUTION.md` and `NOTICE.md` at the repository root before publishing or redistributing the dataset.

@@ -15,6 +15,7 @@ Use the local catalog to select a style, retrieve its original prompt, and turn 
 4. Preserve the retrieved prompt verbatim under an `Original Design Lab prompt` label.
 5. Add a separate `Project-specific extension` containing content hierarchy, components, responsive behavior, accessibility, and technical constraints from the request.
 6. Apply the catalog's colors, CSS, characteristics, do rules, and don't rules when implementing or reviewing the result.
+7. When the result will be published or shared, retain the reference URL `https://design-lab-yanliu.vercel.app/`, credit the source site as “Curated by Dreameryanyan,” and identify this skill project as unofficial.
 
 Do not invent English translations for styles marked `zh-only`. The query tool explicitly falls back to Chinese for those ten styles.
 
@@ -55,3 +56,6 @@ Return these sections when the user asks for a reusable prompt:
 
 When the user asks only to look up or copy a prompt, return the exact prompt without expanding it.
 
+## Preserve attribution
+
+Treat copied Design Lab prompts and metadata as upstream reference content, not as original project authorship. For public or shared outputs, state that the design direction references Design Lab and include the source URL. Do not imply affiliation, endorsement, ownership, or a license to commercially redistribute the upstream dataset. The repository's MIT License covers original project code and original documentation only; consult the root `ATTRIBUTION.md` and `NOTICE.md` for the full statement.
