@@ -1,0 +1,4 @@
+interface:
+  display_name: "Design Lab Prompts"
+  short_description: "Search and apply 77 curated frontend design styles"
+  default_prompt: "Use $design-lab-prompts to recommend a visual style and compose an implementation-ready design prompt."

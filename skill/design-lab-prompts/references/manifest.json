@@ -1,0 +1,44 @@
+{
+  "version": "0.1.0",
+  "schema_version": "1.0.0",
+  "source": {
+    "url": "https://design-lab-yanliu.vercel.app/",
+    "title": "Design Lab",
+    "curator": "Dreameryanyan",
+    "captured_at": "2026-07-16T17:29:57+08:00",
+    "extraction": "current rendered page inline JavaScript",
+    "inline_source_characters": 294111,
+    "inline_source_sha256": "841157a48db9ad1baa448a755862bd6139065089c9dfa4b69e2ef538dc3815b1",
+    "note": "Search-engine cache advertised 67 styles; the current page source contains 77."
+  },
+  "stats": {
+    "styles": 77,
+    "styles_bilingual": 67,
+    "styles_zh_only": 10,
+    "prompts_zh": 174,
+    "prompts_en": 144
+  },
+  "recommendation_records": 144,
+  "files": {
+    "catalog.json": {
+      "sha256": "cd41eaf967936036ac1d4f30fbbc40ec3ee63b2b7ae2ed20ff57c68124d6bdd0",
+      "bytes": 329227
+    },
+    "style-index.md": {
+      "sha256": "a01e8dac032550856e55217a6cfbda7a82f205d2b574a27162735b941ef87d88",
+      "bytes": 7163
+    },
+    "prompts-zh.md": {
+      "sha256": "9d57c40aebb14fee0cc2784db66cb37f06d46e025098d66631ed0b7bdf43c369",
+      "bytes": 38383
+    },
+    "prompts-en.md": {
+      "sha256": "2ae2c9383498c34c1508e4b984910beb5a501d9fe5c98c8beccb096a88062d7e",
+      "bytes": 34090
+    },
+    "source-notes.md": {
+      "sha256": "560f5370756aed421599fb41bce8a633de844750bc738d8c3a248b6e59defb86",
+      "bytes": 1648
+    }
+  }
+}

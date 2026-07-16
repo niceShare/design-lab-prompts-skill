@@ -1,0 +1,57 @@
+---
+name: design-lab-prompts
+description: Search, compare, recommend, and apply 77 curated frontend visual styles from the Design Lab prompt collection, including 174 Chinese and 144 English prompt entries, design tokens, CSS snippets, characteristics, and do/don't rules. Use when choosing a UI/web design direction, writing an implementation-ready vibe-coding prompt, comparing visual styles, extracting a named style such as Glassmorphism or Brutalism, or recommending styles for SaaS, portfolios, e-commerce, content, gaming, wellness, fintech, education, food, fashion, AI/tech, or culture projects.
+---
+
+# Design Lab Prompts
+
+Use the local catalog to select a style, retrieve its original prompt, and turn it into a project-specific implementation brief without losing the source language.
+
+## Workflow
+
+1. Identify the project type, desired mood, light/dark preference, and acceptable visual risk from the request.
+2. If the user names a style, inspect it directly. Otherwise run the recommender, then compare the top two or three candidates.
+3. Retrieve the original basic, advanced, or keyword prompt for the selected style.
+4. Preserve the retrieved prompt verbatim under an `Original Design Lab prompt` label.
+5. Add a separate `Project-specific extension` containing content hierarchy, components, responsive behavior, accessibility, and technical constraints from the request.
+6. Apply the catalog's colors, CSS, characteristics, do rules, and don't rules when implementing or reviewing the result.
+
+Do not invent English translations for styles marked `zh-only`. The query tool explicitly falls back to Chinese for those ten styles.
+
+## Query the catalog
+
+Run commands from this skill directory:
+
+```bash
+python3 scripts/query_prompts.py stats
+python3 scripts/query_prompts.py list --lang zh --filter trend
+python3 scripts/query_prompts.py show glass --lang en
+python3 scripts/query_prompts.py search "warm editorial SaaS" --lang all --limit 5
+python3 scripts/query_prompts.py prompt luxury --lang zh --kind advanced
+python3 scripts/query_prompts.py recommend "AI developer dashboard" --lang en --level 3
+```
+
+Use `--json` with `stats`, `show`, `search`, or `recommend` when another script will consume the result.
+
+## Select references progressively
+
+- Read [references/style-index.md](references/style-index.md) for a compact inventory and filter overview.
+- Read [references/prompts-zh.md](references/prompts-zh.md) only when browsing the full Chinese prompt book.
+- Read [references/prompts-en.md](references/prompts-en.md) only when browsing the full English prompt book.
+- Read [references/catalog.json](references/catalog.json) for machine-readable metadata, exact CSS, design tokens, or recommendation mappings.
+- Read [references/source-notes.md](references/source-notes.md) when reporting provenance, snapshot limits, translation coverage, or reuse rights.
+
+Prefer `scripts/query_prompts.py` over loading the full catalog into context for ordinary lookups.
+
+## Compose the final design prompt
+
+Return these sections when the user asks for a reusable prompt:
+
+1. `Selected style` — localized name, style ID, and one-sentence rationale.
+2. `Original Design Lab prompt` — exact retrieved text.
+3. `Project-specific extension` — concrete page structure, component states, responsive rules, motion, accessibility, and stack constraints.
+4. `Design tokens` — the catalog palette and relevant CSS.
+5. `Guardrails` — applicable do/don't rules.
+
+When the user asks only to look up or copy a prompt, return the exact prompt without expanding it.
+
