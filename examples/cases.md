@@ -17,7 +17,7 @@ python3 scripts/query_prompts.py prompt terminal --lang en --kind basic
 
 推荐器返回 Terminal、Kinetic、Neomorphism。选择 Terminal，因为开发者工具的语义与命令行视觉天然一致，而且不需要用高强度动画牺牲数据可读性。
 
-Original Design Lab prompt:
+Source style instructions used during planning:
 
 > Terminal style: black background. Green (#00FF88) or amber text. Everything monospace. Cards look like terminal windows with `$` prompt prefix. Buttons styled as `[ EXECUTE ]`. Add blinking cursor animation.
 
@@ -41,7 +41,7 @@ python3 scripts/query_prompts.py recommend "luxury watch ecommerce" --category e
 python3 scripts/query_prompts.py prompt luxury --lang zh --kind advanced
 ```
 
-Original Design Lab prompt:
+Source style instructions used during planning:
 
 > 暗黑奢华产品页：深色底+微妙金色径向光晕。小标签全大写+0.3em字间距+9px。分隔线渐变金色。按钮透明底+金色描边。金色只做点缀，不要大面积。
 
@@ -89,7 +89,7 @@ python3 scripts/query_prompts.py recommend "young beauty ecommerce" --category e
 python3 scripts/query_prompts.py prompt y2k --lang zh --kind advanced
 ```
 
-Original Design Lab prompt:
+Source style instructions used during planning:
 
 > Y2K落地页：粉紫渐变+漂浮气泡。chrome金属文字(白→灰→白gradient+background-clip:text)。药丸按钮+渐变。✦twinkle动画。甜美、闪亮、怀旧未来感。
 
@@ -99,4 +99,3 @@ Project-specific extension:
 - 气泡和星光为非交互层，设置 `pointer-events: none`。
 - 动画使用透明度和 transform，低动态偏好下完全静止。
 - 保持购买按钮、价格和色号文字达到 WCAG AA 对比度，不用 chrome 渐变承载关键信息。
-

@@ -12,10 +12,10 @@ Use the local catalog to select a style, retrieve its original prompt, and turn 
 1. Identify the project type, desired mood, light/dark preference, and acceptable visual risk from the request.
 2. If the user names a style, inspect it directly. Otherwise run the recommender, then compare the top two or three candidates.
 3. Retrieve the original basic, advanced, or keyword prompt for the selected style.
-4. Preserve the retrieved prompt verbatim under an `Original Design Lab prompt` label.
+4. Keep the retrieved source prompt separate from project-specific additions in working notes. When implementing a website or app, do not render either the prompt or provenance labels as user-facing content.
 5. Add a separate `Project-specific extension` containing content hierarchy, components, responsive behavior, accessibility, and technical constraints from the request.
 6. Apply the catalog's colors, CSS, characteristics, do rules, and don't rules when implementing or reviewing the result.
-7. When the result will be published or shared, retain the reference URL `https://design-lab-yanliu.vercel.app/`, credit the source site as “Curated by Dreameryanyan,” and identify this skill project as unofficial.
+7. Keep attribution in repository documentation or external delivery notes: retain `https://design-lab-yanliu.vercel.app/`, credit the source site as “Curated by Dreameryanyan,” and identify this skill project as unofficial.
 
 Do not invent English translations for styles marked `zh-only`. The query tool explicitly falls back to Chinese for those ten styles.
 
@@ -49,13 +49,14 @@ Prefer `scripts/query_prompts.py` over loading the full catalog into context for
 Return these sections when the user asks for a reusable prompt:
 
 1. `Selected style` — localized name, style ID, and one-sentence rationale.
-2. `Original Design Lab prompt` — exact retrieved text.
+2. `Source style instructions` — exact retrieved text.
 3. `Project-specific extension` — concrete page structure, component states, responsive rules, motion, accessibility, and stack constraints.
 4. `Design tokens` — the catalog palette and relevant CSS.
 5. `Guardrails` — applicable do/don't rules.
 
 When the user asks only to look up or copy a prompt, return the exact prompt without expanding it.
+When the user asks to implement a website or app, use the prompt sections as internal planning material and deliver only the requested product interface.
 
-## Preserve attribution
+## Keep provenance outside generated UI
 
-Treat copied Design Lab prompts and metadata as upstream reference content, not as original project authorship. For public or shared outputs, state that the design direction references Design Lab and include the source URL. Do not imply affiliation, endorsement, ownership, or a license to commercially redistribute the upstream dataset. The repository's MIT License covers original project code and original documentation only; consult the root `ATTRIBUTION.md` and `NOTICE.md` for the full statement.
+Treat copied Design Lab prompts and metadata as upstream reference content, not as original project authorship. Never add source credit, attribution copy, unofficial-project disclaimers, or prompt labels to a generated website or app UI, including its footer, unless the user explicitly requests visible attribution. Put any required provenance in repository documentation or external delivery notes instead. Do not imply affiliation, endorsement, ownership, or a license to commercially redistribute the upstream dataset. The repository's MIT License covers original project code and original documentation only; consult the root `ATTRIBUTION.md` and `NOTICE.md` for the full statement.

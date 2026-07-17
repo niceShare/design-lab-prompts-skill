@@ -78,7 +78,7 @@ The recommender first uses Design Lab's curated project-category matrix. When no
 python3 scripts/query_prompts.py prompt terminal --lang en --kind basic
 ```
 
-The skill keeps retrieved source wording under an `Original Design Lab prompt` label and places project-specific requirements in a separate extension. It never presents generated additions as source text.
+The skill keeps retrieved source wording separate from project-specific requirements during planning. Generated websites and apps contain only the requested product interface; provenance remains in repository documentation or external delivery notes rather than visible UI.
 
 ### Handle missing translations
 

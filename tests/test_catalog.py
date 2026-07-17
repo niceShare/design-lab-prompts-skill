@@ -294,6 +294,13 @@ class DocumentationTests(unittest.TestCase):
         self.assertIn("Curated by Dreameryanyan", skill)
         self.assertIn("Treat copied Design Lab prompts and metadata as upstream reference content", skill)
 
+    def test_skill_keeps_provenance_notices_out_of_generated_ui(self) -> None:
+        skill = (SKILL / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("Keep attribution in repository documentation or external delivery notes", skill)
+        self.assertIn("Never add source credit, attribution copy, unofficial-project disclaimers, or prompt labels", skill)
+        self.assertNotIn("Original Design Lab prompt", skill)
+        self.assertNotIn("For public or shared outputs, state that the design direction references Design Lab", skill)
+
 
 class CliTests(unittest.TestCase):
     def run_cli(self, *args: str, expected_code: int = 0) -> subprocess.CompletedProcess[str]:
